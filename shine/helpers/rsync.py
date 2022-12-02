@@ -1,6 +1,7 @@
 import typing as t
 import logging as log
 import re
+import os
 from datetime import datetime, timedelta
 
 from ..daemon import Task
@@ -65,6 +66,10 @@ def Rsync(
         options.append(f'--timeout={io_timeout}')
     if no_default_options is False:
         options = DEFAULT_OPTIONS + options
+    try:
+        os.makedirs(local, exist_ok=True)
+    except OSError:
+        raise OSError('Rsync: local dir does not exist')
 
     argv = ([excutable] + options + exclude + [upstream, local])
     if enable_pre_stage:
