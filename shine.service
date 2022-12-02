@@ -1,0 +1,24 @@
+[Unit]
+Description=Mirroring Task Scheduler
+After=network.target
+
+[Service]
+Type=exec
+User=mirrors
+Group=mirrors
+
+ExecStart=/usr/bin/shined
+ExecReload=/usr/bin/shine reload
+ExecStop=/usr/bin/shine grace
+TimeoutStopSec=600
+Restart=always
+
+WorkingDirectory=/home/mirrors/shine/instance
+#RuntimeDirectory=shine
+#StateDirectory=shine
+#LogsDirectory=shine
+#ConfigurationDirectory=shine
+#RuntimeDirectoryPreserve=yes
+
+[Install]
+WantedBy=multi-user.target

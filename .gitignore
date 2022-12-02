@@ -1,0 +1,6 @@
+/instance/
+
+__pycache__
+
+.*
+!.gitignore
