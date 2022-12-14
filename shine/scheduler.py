@@ -26,12 +26,7 @@ def sched() -> None:
             sleep_interval = 10
         sleep(sleep_interval)
         with lock:
-            # check whether ready to run a new task
-            log.debug('schedule slot, checking limit')
-            skip = {'skip': False}
-            evt('sched:limit', skip)
-            if skip.get('skip', False):
-                continue
+            log.debug('schedule slot')
             evt('sched:pre')
             # check runnable tasks
             log.debug('checking runnables')
@@ -41,7 +36,12 @@ def sched() -> None:
                 if task.on
                 and task.state != task.SYNCING
                 and task.next_sched <= int(time())
-                and task.condition()
+            ]
+            evt('sched:runnables', runnables)
+            runnables = [
+                task
+                for task in runnables
+                if task.condition()
             ]
             log.debug(f'runnables: {[ task.name for task in runnables ]}')
             if not runnables:
