@@ -68,8 +68,8 @@ def Rsync(
         options = DEFAULT_OPTIONS + options
     try:
         os.makedirs(local, exist_ok=True)
-    except OSError:
-        raise OSError('Rsync: local dir does not exist')
+    except OSError as exc:
+        raise OSError('Rsync: local dir does not exist') from exc
 
     argv = ([excutable] + options + exclude + [upstream, local])
     if enable_pre_stage:
