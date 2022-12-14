@@ -48,23 +48,11 @@ def sched() -> None:
                 continue
             # select a runnable
             evt('sched:select', locals())
-            try:
-                ratio = int(config.get('priority_ratio', 60))
-            except ValueError:
-                log.exception('priority_ratio should be int')
-                ratio = 60
             next_task = max(
                 runnables,
-                key=lambda t: t.priority*ratio+t.waited
+                key=lambda t: (t.priority or 1.0)*(time()-t.next_sched)
             )
-            log.debug(f'next_task: {next_task.name}'
-                f'({next_task.priority}*{ratio}+{next_task.waited})')
-            # raise priority of other runnables
-            evt('sched:selected', locals())
-            for task in runnables:
-                if task is not next_task:
-                    task.waited += 1
-            next_task.waited = 0
+            log.debug(f'next_task: {next_task.name}')
             save()
             # start the task
             threading.Thread(

@@ -23,9 +23,7 @@ class Task:
         # ** is scheduling
         self.on: bool = False
         # * static priority in config
-        self.priority: int = 0
-        # - dynamic priority during runtime
-        self.waited: int = 0
+        self.priority: float = 1
         # - mirror status
         self.state: int = Task.PAUSED
         # - last successful sync finished at
