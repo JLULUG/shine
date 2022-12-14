@@ -7,9 +7,9 @@ Type=exec
 User=mirrors
 Group=mirrors
 
-ExecStart=/usr/bin/shined
-ExecReload=/usr/bin/shine reload
-ExecStop=/usr/bin/shine grace
+ExecStart=shined
+ExecReload=shine reload
+ExecStop=shine grace
 TimeoutStopSec=600
 Restart=always
 

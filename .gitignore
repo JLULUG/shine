@@ -1,6 +1,7 @@
 /instance/
 
 __pycache__
+*.egg-info/
 
 .*
 !.gitignore
