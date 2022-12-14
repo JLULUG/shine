@@ -48,8 +48,6 @@ class Task:
         self.upstream: t.Optional[str] = None
         # load state
         self.__dict__.update(_dict or {})
-        # - running pids
-        self.pids: list[int] = []
 
     # prevent AttributeError
     def __getattr__(self, _attr: str) -> None:
@@ -102,6 +100,10 @@ class Task:
         normal = self.next()
         failed = int(time())+30*int(2**self.fail_count)
         return min(normal, failed)
+
+    # + method to stop the task
+    def kill(self) -> bool:
+        return False
 
     # + arbitrary job after run()
     def post(self) -> None:

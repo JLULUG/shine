@@ -45,12 +45,9 @@ def stop(task: Task) -> str:
     if task.state != Task.SYNCING:
         return 'Task already stopped.'
     log.warning(f'force stopping {task.name}')
-    for pid in task.pids:
-        try:
-            os.kill(pid, signal.SIGTERM)
-        except OSError:
-            log.exception(f'error killing {pid}')
-    return 'Stopping attempted.\n'
+    if not task.kill():
+        return 'Failed to stop the task.'
+    return 'Stopping attempted.'
 
 
 def enable(task: Task) -> str:

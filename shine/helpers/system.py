@@ -1,8 +1,10 @@
 import typing as t
 import logging as log
+import os
+import signal
 from subprocess import Popen, PIPE, STDOUT, SubprocessError, TimeoutExpired
 
-from ..daemon import Task
+from ..daemon import Task, _bind_method
 
 
 def System(
@@ -27,7 +29,8 @@ def System(
                 **popen_kwargs
             ) as process:
                 log.debug(f'System: process pid: {process.pid}')
-                self.pids.append(process.pid)
+                setattr(self, 'system_pid', process.pid)
+                setattr(self, 'kill', _bind_method(self, 'kill', kill_pid))
                 try:
                     process.communicate(input_data, timeout=timeout)
                 except TimeoutExpired:
@@ -39,7 +42,7 @@ def System(
                         except TimeoutExpired:
                             log.error('System: process did not exit, killing')
                             process.kill()
-                self.pids.remove(process.pid)
+                delattr(self, 'system_pid')
                 log.debug('System: process exited')
                 if process.returncode != 0:
                     log.error(f'System: process exited with code {process.returncode}')
@@ -49,3 +52,14 @@ def System(
             raise
 
     return run
+
+
+def kill_pid(self: Task) -> bool:
+    if not self.system_pid:
+        return False
+    try:
+        os.kill(self.system_pid, signal.SIGTERM)
+        return True
+    except OSError:
+        log.exception(f'error killing {self.system_pid}')
+        return False
