@@ -8,42 +8,42 @@ from time import time
 
 from . import VERSION
 from . import daemon
-from .daemon import COMM_SOCK, Task, tasks, save, lock
+from .daemon import COMM_SOCK, Task, tasks, save, lock, evt
 
 
-def usage() -> str:
+def usage(*_: t.Any) -> str:
     r = f'Shine v{VERSION}\n\nUsage:\n'
     for k, v in handlers.items():
         r += f'{k : <10}{v[0]}\n'
     return r
 
 
-def show() -> str:
+def show(*_: t.Any) -> str:
     # TODO prettify
     with lock:
-        return repr(tasks)+'\n'
+        return repr(tasks)
 
 
 def info(task: Task) -> str:
     # TODO prettify
-    return repr(task.__dict__)+'\n'
+    return repr(task.__dict__)
 
 
 def start(task: Task) -> str:
     if task.state == Task.SYNCING:
-        return 'Task already running.\n'
+        return 'Task already running.'
     log.warning(f'force starting {task.name}')
     threading.Thread(
         target=Task.thread,
         args=(task,),
         name=task.name
     ).start()
-    return 'Started.\n'
+    return 'Started.'
 
 
 def stop(task: Task) -> str:
     if task.state != Task.SYNCING:
-        return 'Task already stopped.\n'
+        return 'Task already stopped.'
     log.warning(f'force stopping {task.name}')
     for pid in task.pids:
         try:
@@ -55,50 +55,50 @@ def stop(task: Task) -> str:
 
 def enable(task: Task) -> str:
     if task.on:
-        return 'Task not disabled.\n'
+        return 'Task not disabled.'
     task.on = True
     if task.state == Task.PAUSED:
         task.next_sched = int(time())
     save()
     log.info(f'{task.name} on')
-    return info(task)+'\nEnabled this run.\n'
+    return info(task)+'\nEnabled this run.'
 
 
 def disable(task: Task) -> str:
     if not task.on:
-        return 'Task not enabled.\n'
+        return 'Task not enabled.'
     task.on = False
     if task.state != Task.SYNCING:
         task.state = Task.PAUSED
     save()
     log.info(f'{task.name} disabled')
-    return info(task)+'\nDisabled this run.\n'
+    return info(task)+'\nDisabled this run.'
 
 
 def remove(task: Task) -> str:
     if task.state == Task.SYNCING:
         log.warning(f'cannot remove running task {task.name}')
-        return 'Task still running.\n'
+        return 'Task still running.'
     tasks.pop(task.name)
     save()
     log.warning(f'{task.name} removed')
-    return 'Removed.\n'
+    return 'Removed.'
 
 
-def reload() -> str:
+def reload(*_: t.Any) -> str:
     if not daemon.reload():
         return 'Error occured reconfiguring. Check log output for details.'
-    return 'Reconfigured.\n'
+    return 'Reconfigured.'
 
 
-def grace() -> str:
-    daemon.grace()
-    return 'Gracefully shutting down.\n'
+def grace(*_: t.Any) -> str:
+    os.kill(0, signal.SIGINT)
+    return 'Gracefully shutting down.'
 
 
-def kill() -> str:
-    daemon.clean(signal.SIGTERM)
-    return 'Goodbye.\n'
+def kill(*_: t.Any) -> str:
+    os.kill(0, signal.SIGTERM)
+    return 'Goodbye.'
 
 
 handlers: dict[str, tuple[str, t.Callable[..., str]]] = {
@@ -133,11 +133,11 @@ def handle(conn: socket.socket) -> None:
                     if len(line) < 2:  # missing parameter
                         result = usage()
                     elif line[1].strip() not in tasks:
-                        result = 'Task not found.\n'
+                        result = 'Task not found.'
                     else:
                         result = handler[1](tasks[line[1].strip()])
             else:
-                result = handler[1]()
+                result = handler[1](line[1:])
             log.debug(f'response: {repr(result)}')
             result_b = result.encode('utf-8', errors='ignore')
             conn.sendall(int.to_bytes(len(result_b), 4, 'big'))
@@ -145,6 +145,7 @@ def handle(conn: socket.socket) -> None:
 
 
 def comm() -> None:
+    evt('comm:load_handlers', handlers)
     try:
         try:
             os.remove(COMM_SOCK)
