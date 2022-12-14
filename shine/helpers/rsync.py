@@ -42,7 +42,7 @@ def Rsync(
 	options: t.Optional[list[str]] = None,
     exclude: t.Optional[list[str]] = None,
     password: t.Optional[str] = None,
-    timeout: t.Optional[int] = None,
+    timeout: t.Optional[int] = 24*60*60,
 	env: t.Optional[dict[str, str]] = None,
     enable_pre_stage: bool = False,
     pre_stage_extra: t.Optional[list[str]] = None,
