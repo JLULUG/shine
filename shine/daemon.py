@@ -172,8 +172,8 @@ def clean(signum: int = 0, _frame: t.Any = None) -> None:
     evt(':exit')
     log.warning('goodbye')
     if signum:
+        signal.signal(signal.SIGTERM, signal.SIG_DFL)
         os.killpg(0, signal.SIGTERM)
-        sys.exit(128+signum)
     sys.exit(0)
 
 
