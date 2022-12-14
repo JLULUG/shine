@@ -47,7 +47,10 @@ def Interval(
         raise ValueError('Interval: no available hour')
 
     interval_sec = _time_conv(interval)
-    randomize_sec = _time_conv(randomize)
+    if randomize == 'auto':
+        randomize_sec = interval_sec // 10
+    else:
+        randomize_sec = _time_conv(randomize)
     log.debug(f'Interval: {interval} -> {interval_sec}(+{randomize_sec}), '
               f'{avail_hours} -> {hour_map}')
 
