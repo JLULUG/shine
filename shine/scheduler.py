@@ -13,9 +13,9 @@ def sched() -> None:
                 log.warning(f'task {task.name} was syncing, marked as failed')
                 task.last_finish = int(time())
                 task.state = Task.FAILED
-                task.next_sched = task.retry()
+                task.next_sched = int(time())
         save()
-        evt('sched:load')
+    evt('sched:load')
     log.warning('started')
     while not _windup.is_set():
         # sleep for a while
