@@ -36,22 +36,16 @@ class Task:
         self.next_sched: int = 0
         # - retry interval doubles each failure
         self.fail_count: int = 0
-        # + description
-        self.description: t.Optional[str] = None
-        # + category
-        self.category: t.Optional[str] = None
-        # + storage size used
-        self.size: t.Optional[int] = None
-        # + web path
-        self.url: t.Optional[str] = None
-        # + upstream server
-        self.upstream: t.Optional[str] = None
+        # - storage size used
+        self.size: int = 0
         # load state
         self.__dict__.update(_dict or {})
+        # clear config
+        self._config: dict[str, t.Any] = {}
 
-    # prevent AttributeError
-    def __getattr__(self, _attr: str) -> None:
-        return None
+    # read-only config
+    def __getattr__(self, attr: str) -> t.Any:
+        return self._config.get(attr)
 
     # - size in 'xxx GiB' string
     @property

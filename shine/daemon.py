@@ -35,7 +35,11 @@ def save() -> bool:
     try:
         with open(STATE_FILE, 'w', encoding='utf-8') as f:
             json.dump([
-                task.__dict__
+                {
+                    k: v
+                    for k, v in task.__dict__.items()
+                    if not k.startswith('_')
+                }
                 for task in tasks.values()
             ], f, default=lambda _: None, skipkeys=True)
         return True
@@ -88,7 +92,11 @@ def load_config() -> None:
     evt(':config_load')
 
 
-def _bind_method(task: 'Task', method: str, f: FunctionType) -> MethodType:
+def _bind_method(
+    task: 'Task',
+    method: str,
+    f: t.Callable[..., t.Any]
+) -> MethodType:
     # no throw wrapping for custom method
     @wraps(f)
     def wrapper(*args, **kwargs):  # type: ignore
@@ -102,6 +110,7 @@ def _bind_method(task: 'Task', method: str, f: FunctionType) -> MethodType:
 
 def load_mirrors() -> None:
     # make sure removed mirrors kept disabled
+    _bare_task = Task()
     for task in tasks.values():
         task.on = False
     for file in _scandir_py(MIRRORS_DIR):
@@ -116,22 +125,21 @@ def load_mirrors() -> None:
             continue
         tasks.setdefault(name, Task())
         task = tasks[name]
-        for k, v in task_config.items():
-            if isinstance(v, FunctionType):
-                if (
-                    not isinstance(Task.__dict__.get(k), FunctionType)
-                    and k[0].islower()
-                ):
-                    log.error(f'set prototype Task.{k} before overriding public method')
+        for attr, val in task_config.items():
+            if attr in helpers.__all__:
+                continue
+            if isinstance(val, FunctionType):
+                val = _bind_method(task, attr, val)
+            try:
+                # pylint: disable-next=unnecessary-dunder-call
+                default = _bare_task.__getattribute__(attr)
+                if type(val) is not type(default):
+                    log.error(f'builtin attribute "{attr}" should be of type {type(default)}')
                     _load_err.set()
                     continue
-                v = _bind_method(task, k, v)
-            orig = Task().__dict__.get(k)
-            if (orig is not None) and (type(v) is not type(orig)):
-                log.error(f'builtin attribute "{k}" should be of type {type(orig)}')
-                _load_err.set()
-                continue
-            task.__dict__[k] = v
+                task.__dict__[attr] = val
+            except AttributeError:
+                task._config[attr] = val  # pylint: disable=protected-access
 
     log.info(f'mirrors: {repr(list(tasks.keys()))}')
     for task in tasks.values():
@@ -233,5 +241,6 @@ from .task import Task
 from .command import comm
 from .scheduler import sched
 
-# pylint: disable-next=wildcard-import,unused-wildcard-import
+# pylint: disable=wildcard-import,unused-wildcard-import
+from . import helpers
 from .helpers import *
