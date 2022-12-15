@@ -142,7 +142,6 @@ def handle(conn: socket.socket) -> None:
 
 
 def comm() -> None:
-    evt('comm:load_handlers', handlers)
     try:
         try:
             os.remove(COMM_SOCK)
