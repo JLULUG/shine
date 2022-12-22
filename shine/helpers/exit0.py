@@ -2,6 +2,7 @@ import typing as t
 
 from ..daemon import Task
 
+
 def Exit0(
     f: t.Callable[[Task], tuple[int, t.Any]]
 ) -> t.Callable[[Task], bool]:

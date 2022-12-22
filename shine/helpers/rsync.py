@@ -44,8 +44,7 @@ def Rsync(
     password: t.Optional[str] = None,
     timeout: t.Optional[int] = 24*60*60,
 	env: t.Optional[dict[str, str]] = None,
-    enable_pre_stage: bool = False,
-    pre_stage_extra: t.Optional[list[str]] = None,
+    pre_stage: t.Optional[list[str]] = None,
 	io_timeout: int = 60,
 	excutable: str = 'rsync',
     no_default_options: bool = False,
@@ -56,7 +55,7 @@ def Rsync(
     options = options or []
     exclude = exclude or []
     env = env or {}
-    pre_stage_extra = pre_stage_extra or []
+    pre_stage = pre_stage or []
 
     if password is not None:
         env['RSYNC_PASSWORD'] = password
@@ -72,10 +71,10 @@ def Rsync(
         raise OSError('Rsync: local dir does not exist') from exc
 
     argv = ([excutable] + options + exclude + [upstream, local])
-    if enable_pre_stage:
+    if pre_stage:
         pre_stage_argv = list(filter(
             lambda x: not x.startswith('--delete'),
-            [excutable] + options + pre_stage_extra + exclude + [upstream, local]
+            [excutable] + options + pre_stage + exclude + [upstream, local]
         ))
 
     def run(self: Task) -> tuple[int, str]:
@@ -85,19 +84,17 @@ def Rsync(
         else:
             stop_at = []
 
-        if enable_pre_stage:
-            pre_stage_ret, pre_stage_out = System(
+        if pre_stage:
+            pre_ret, pre_out = System(
                 pre_stage_argv + stop_at,
                 log_prefix='rsync',
                 env=env,
                 **popen_kwargs
             )(self)
-            if pre_stage_ret != 0:
-                log.error(
-                    f'Rsync: pre stage failed with code {pre_stage_ret}: '
-                    f'{EXIT_CODE.get(pre_stage_ret, "")}'
-                )
-                return (pre_stage_ret, pre_stage_out)
+            if pre_ret != 0:
+                log.error('Rsync: Pre-stage Error '
+                    f'{EXIT_CODE.get(pre_ret, f"unknown {pre_ret}")}')
+                return (pre_ret, pre_out)
 
         ret, out = System(
             argv + stop_at,
@@ -106,7 +103,7 @@ def Rsync(
             **popen_kwargs
         )(self)
         if ret != 0:
-            log.error(f'Rsync: failed with code {ret}: {EXIT_CODE.get(ret, "")}')
+            log.error(f'Rsync: Error {EXIT_CODE.get(ret, f"unknown {ret}")}')
             return (ret, out)
 
         log.debug('Rsync: success')

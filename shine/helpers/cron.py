@@ -6,36 +6,9 @@ from ..daemon import Task
 
 
 def Cron(
-    cron_spec: str,
+    cron_spec: str,  # see `man crontab(5)`
 ) -> t.Callable[[Task], int]:
     """Calculate next run using crontab syntax"""
-    # see `man crontab(5)`
-    def spec_to_set(spec: str, lower: int, upper: int) -> set[int]:
-        """convert list/range/step notation to valid value set"""
-        # A field may contain an asterisk (*), which always stands for "first-last".
-        spec = spec.replace('*', f'{lower}-{upper}')
-        # A list is a set of numbers (or ranges) separated by commas.
-        ranges = spec.split(',')
-        res: set[int] = set()
-        for range_spec in ranges:
-            if '/' not in range_spec:
-                range_spec = range_spec + '/1'
-            # Step values can be used in conjunction with ranges.
-            range_spec, step_str = range_spec.split('/')
-            step = int(step_str)
-            if step <= 0:
-                raise ValueError('Cron: step must be positive')
-            if '-' not in range_spec:
-                range_spec = range_spec + '-' + range_spec
-            # Ranges are two numbers separated with a hyphen.
-            frm, to = map(int, range_spec.split('-'))
-            if not lower <= frm <= to <= upper:
-                raise ValueError(f'Cron: {frm}-{to} should be within {lower}-{upper}')
-            # Ranges are two numbers separated with a hyphen.  The specified range is inclusive.
-            # Following a range with "/<number>" specifies skips of the values through the range.
-            res.update(range(frm, to+1, step))
-        return res
-
     try:
         m_spec, h_spec, d_spec, mo_spec, w_spec = cron_spec.split()
         m_set = spec_to_set(m_spec, 0, 59)
@@ -84,3 +57,30 @@ def Cron(
                 return int(x.timestamp())
 
     return nxt
+
+
+def spec_to_set(spec: str, lower: int, upper: int) -> set[int]:
+    """convert list/range/step notation to valid value set"""
+    # A field may contain an asterisk (*), which always stands for "first-last".
+    spec = spec.replace('*', f'{lower}-{upper}')
+    # A list is a set of numbers (or ranges) separated by commas.
+    ranges = spec.split(',')
+    res: set[int] = set()
+    for range_spec in ranges:
+        if '/' not in range_spec:
+            range_spec = range_spec + '/1'
+        # Step values can be used in conjunction with ranges.
+        range_spec, step_str = range_spec.split('/')
+        step = int(step_str)
+        if step <= 0:
+            raise ValueError('Cron: step must be positive')
+        if '-' not in range_spec:
+            range_spec = range_spec + '-' + range_spec
+        # Ranges are two numbers separated with a hyphen.
+        frm, to = map(int, range_spec.split('-'))
+        if not lower <= frm <= to <= upper:
+            raise ValueError(f'Cron: {frm}-{to} should be within {lower}-{upper}')
+        # Ranges are two numbers separated with a hyphen.  The specified range is inclusive.
+        # Following a range with "/<number>" specifies skips of the values through the range.
+        res.update(range(frm, to+1, step))
+    return res

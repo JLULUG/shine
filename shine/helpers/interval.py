@@ -6,25 +6,10 @@ from datetime import datetime, timedelta
 from ..daemon import Task
 
 
-def _time_conv(time: t.Union[int, str]) -> int:
-    if isinstance(time, int):
-        time = str(time) + 's'
-    conversion = {'s': 1, 'm': 60, 'h': 60*60, 'd': 24*60*60, 'w': 7*24*60*60}
-    if time[-1] not in conversion:
-        raise ValueError('Interval: interval must end with s/m/h/d/w.')
-    try:
-        time_sec = int(time[:-1])*conversion[time[-1]]
-    except (TypeError, ValueError):
-        log.error('Interval: invalid interval')
-        raise
-    if not 0 <= time_sec < 10*365*24*60*60:
-        raise ValueError('Interval: interval must be within 10 years')
-    return time_sec
-
 def Interval(
-    interval: t.Union[int, str],  # second int or 25m/6h style str
-    randomize: t.Union[int, str] = 0,
-    avail_hours: str = '0-23'     # 0-5,22-23 style str
+    interval: t.Union[int, str],       # second int or 25m/6h style str
+    randomize: t.Union[int, str] = 0,  # or auto for 1/10 interval
+    avail_hours: str = '0-23'          # 0-5,22-23 style str
 ) -> t.Callable[[Task], int]:
     """Calculate next run by interval over available hours"""
     # convert list of ranges notation to valid value set
@@ -76,3 +61,19 @@ def Interval(
         return int(x.timestamp())
 
     return nxt
+
+
+def _time_conv(time: t.Union[int, str]) -> int:
+    if isinstance(time, int):
+        time = str(time) + 's'
+    conversion = {'s': 1, 'm': 60, 'h': 60*60, 'd': 24*60*60, 'w': 7*24*60*60}
+    if time[-1] not in conversion:
+        raise ValueError('Interval: interval must end with s/m/h/d/w.')
+    try:
+        time_sec = int(time[:-1])*conversion[time[-1]]
+    except (TypeError, ValueError):
+        log.error('Interval: invalid interval')
+        raise
+    if not 0 <= time_sec < 10*365*24*60*60:
+        raise ValueError('Interval: interval must be within 10 years')
+    return time_sec
