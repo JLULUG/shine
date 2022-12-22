@@ -7,12 +7,12 @@ from .daemon import evt, Task, tasks, lock, _windup, save, config
 
 def sched() -> None:
     with lock:
-        # fix inconsistent state
         for task in tasks.values():
-            if task.state == Task.SYNCING:
-                log.warning(f'task {task.name} was syncing, marked as failed')
+            # fix inconsistent state
+            if task.last_start > task.last_finish:
+                log.warning(f'rescheduling task {task.name}')
+                task.fail_count += 1
                 task.last_finish = int(time())
-                task.state = Task.FAILED
                 task.next_sched = int(time())
         save()
     evt('sched:load')
@@ -30,15 +30,14 @@ def sched() -> None:
             evt('sched:pre')
             # check runnable tasks
             log.debug('checking runnables')
-            runnables = [
+            runnables = [  # filter by trivial criteria
                 task
                 for task in tasks.values()
-                if task.on
-                and task.state != task.SYNCING
+                if task.on and not task.active
                 and task.next_sched <= int(time())
             ]
-            evt('sched:runnables', runnables)
-            runnables = [
+            evt('sched:runnables', runnables)  # filter by plugins
+            runnables = [  # filter by custom condition
                 task
                 for task in runnables
                 if task.condition()

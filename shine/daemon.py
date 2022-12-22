@@ -12,7 +12,7 @@ from types import FunctionType, MethodType
 CONFIG_DIR = os.getenv('CONFIGURATION_DIRECTORY', '.')
 CONFIG_FILE = os.path.join(CONFIG_DIR, 'config.py')
 PLUGINS_DIR = os.path.join(CONFIG_DIR, 'plugins')
-MIRRORS_DIR = os.path.join(CONFIG_DIR, 'mirrors')
+TASKS_DIR = os.path.join(CONFIG_DIR, 'tasks')
 STATE_DIR = os.getenv('STATE_DIRECTORY', '.')
 STATE_FILE = os.path.join(STATE_DIR, 'state.json')
 RUN_DIR = os.getenv('RUNTIME_DIRECTORY', '.')
@@ -39,6 +39,7 @@ def save() -> bool:
                     k: v
                     for k, v in task.__dict__.items()
                     if not k.startswith('_')
+                    and isinstance(v, (int, float, bool, str, dict, list))
                 }
                 for task in tasks.values()
             ], f, default=lambda _: None, skipkeys=True)
@@ -103,28 +104,31 @@ def _bind_method(
         try:
             return f(*args, **kwargs)
         except Exception:  # pylint: disable=broad-except
-            log.exception('exception in task method, using default implementation')
-            return Task.__dict__.get(method)(*args, **kwargs)  # type: ignore
+            if method in Task.__dict__:
+                log.exception('exception in task method, using default implementation')
+                return Task.__dict__[method](*args, **kwargs)
+            raise
+
     return MethodType(wrapper, task)
 
 
-def load_mirrors() -> None:
-    # make sure removed mirrors kept disabled
+def load_tasks() -> None:
     _bare_task = Task()
     for task in tasks.values():
-        task.on = False
-    for file in _scandir_py(MIRRORS_DIR):
-        log.info(f'loading mirror {file.name}')
+        setattr(task, '_loaded', False)
+    for file in _scandir_py(TASKS_DIR):
+        log.info(f'loading task {file.name}')
         task_config: dict[str, t.Any] = {}
         if not _exec(file.path, task_config):
             continue  # skip on exception
         name = task_config.get('name')
         if not name or not isinstance(name, str):
-            log.error(f'"name" not present in mirror config {file.name}')
+            log.error(f'name not present in task config {file.name}')
             _load_err.set()
             continue
         tasks.setdefault(name, Task())
         task = tasks[name]
+        setattr(task, '_loaded', True)
         for attr, val in task_config.items():
             if attr in helpers.__all__:
                 continue
@@ -137,27 +141,28 @@ def load_mirrors() -> None:
                     log.error(f'builtin attribute "{attr}" should be of type {type(default)}')
                     _load_err.set()
                     continue
-                task.__dict__[attr] = val
+                setattr(task, attr, val)
             except AttributeError:
                 task._config[attr] = val  # pylint: disable=protected-access
 
-    log.info(f'mirrors: {repr(list(tasks.keys()))}')
+    log.info(f'tasks: {repr(list(tasks.keys()))}')
     for task in tasks.values():
-        if not task.on and task.state != Task.SYNCING:
-            log.info(f'disabling task {task.name}')
-            task.state = Task.PAUSED
-    evt(':mirrors_load')
+        if not getattr(task, '_loaded', False):
+            log.info(f'disabling orphan task {task.name}')
+            task.on = False
+    evt(':tasks_load')
 
 
 def reload(_signum: int = 0, _frame: t.Any = None) -> bool:
-    log.warning('(re)loading plugins, config and mirrors')
+    log.warning('(re)loading plugins, config and tasks')
     _load_err.clear()
     evt(':reload')
     with lock:
         load_plugins()
         load_config()
-        load_mirrors()
-        save()
+        load_tasks()
+        if not save():
+            _load_err.set()
     evt(':load')
     return not _load_err.is_set()
 
@@ -173,6 +178,10 @@ def grace(_signum: int = 0, _frame: t.Any = None) -> None:
 
 
 def clean(signum: int = 0, _frame: t.Any = None) -> None:
+    log.warning('stopping tasks')
+    for task in tasks.values():
+        if task.active:
+            task.kill()
     log.warning('doing final saving')
     evt(':clean')
     with lock:
@@ -209,9 +218,9 @@ def main() -> None:
         log.critical('error loading state file', exc_info=True)
         sys.exit(1)
 
-    # load plugins, config, mirrors
+    # load plugins, config, tasks
     if not reload():
-        log.critical('error loading plugins/config/mirrors. refuse to start.')
+        log.critical('error loading plugins/config/tasks. refuse to start.')
         sys.exit(1)
 
     # setup signal handlers

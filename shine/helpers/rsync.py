@@ -116,8 +116,8 @@ def Rsync(
                         f.read(),
                         re.MULTILINE
                     )
-                self.size = int(match[-1])
-                log.info(f'Rsync: total size {self.size_str}')
+                setattr(self, 'size', int(match[-1]))
+                log.info(f'Rsync: total size {self.size}')
             except (OSError, IndexError, TypeError, ValueError):
                 log.exception('Rsync: failed extracting size from log')
 

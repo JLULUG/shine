@@ -1,6 +1,7 @@
 import typing as t
 import logging as log
 import os
+import json
 import signal
 import socket
 import threading
@@ -21,29 +22,31 @@ def usage(*_: t.Any) -> str:
 def show(*_: t.Any) -> str:
     # TODO prettify
     with lock:
-        return repr(tasks)
+        return '\n'.join([
+            repr(task.__dict__)
+            for task in tasks.values()
+        ])
 
 
 def info(task: Task) -> str:
     # TODO prettify
-    return repr(task.__dict__)
+    return json.dumps(task.__dict__, indent=4, default=repr, skipkeys=True)
 
 
 def start(task: Task) -> str:
-    if task.state == Task.SYNCING:
+    if task.active:
         return 'Task already running.'
     log.warning(f'force starting {task.name}')
     threading.Thread(
-        target=Task.thread,
-        args=(task,),
+        target=task.thread,
         name=task.name
     ).start()
     return 'Started.'
 
 
 def stop(task: Task) -> str:
-    if task.state != Task.SYNCING:
-        return 'Task already stopped.'
+    if not task.active:
+        return 'Task is not running.'
     log.warning(f'force stopping {task.name}')
     if not task.kill():
         return 'Failed to stop the task.'
@@ -54,32 +57,30 @@ def enable(task: Task) -> str:
     if task.on:
         return 'Task not disabled.'
     task.on = True
-    if task.state == Task.PAUSED:
+    if not task.active:
         task.next_sched = int(time())
     save()
     log.info(f'{task.name} on')
-    return info(task)+'\nEnabled this run.'
+    return info(task)+'\nEnabled.'
 
 
 def disable(task: Task) -> str:
     if not task.on:
         return 'Task not enabled.'
     task.on = False
-    if task.state != Task.SYNCING:
-        task.state = Task.PAUSED
     save()
     log.info(f'{task.name} disabled')
-    return info(task)+'\nDisabled this run.'
+    return info(task)+'\nDisabled.'
 
 
 def remove(task: Task) -> str:
-    if task.state == Task.SYNCING:
+    if task.active:
         log.warning(f'cannot remove running task {task.name}')
         return 'Task still running.'
     tasks.pop(task.name)
     save()
     log.warning(f'{task.name} removed')
-    return 'Removed.'
+    return 'Task state removed.'
 
 
 def reload(*_: t.Any) -> str:
@@ -104,8 +105,8 @@ handlers: dict[str, tuple[str, t.Callable[..., str]]] = {
     'info': ('Print <task> details', info),
     'start': ('Force a <task> to start', start),
     'stop': ('Force a <task> to stop', stop),
-    'enable': ('Enable a <task> (runtime)', enable),
-    'disable': ('Disable a <task> (runtime)', disable),
+    'enable': ('Enable a <task>', enable),
+    'disable': ('Disable a <task>', disable),
     'remove': ('Remove a <task> state', remove),
     'reload': ('Reload plugins, config and mirrors', reload),
     'grace': ('Gracefully shutdown after finishing tasks', grace),
