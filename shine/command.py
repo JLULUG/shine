@@ -9,17 +9,25 @@ from time import time
 
 from . import VERSION
 from . import daemon
-from .daemon import COMM_SOCK, Task, tasks, save, lock, evt
+from .daemon import COMM_SOCK, Task, tasks, save, lock
 
 
-def usage(*_: t.Any) -> str:
-    r = f'Shine v{VERSION}\n\nUsage:\n'
-    for k, v in handlers.items():
-        r += f'{k : <10}{v[0]}\n'
+def usage(_: str = '') -> str:
+    r = f'Shine v{VERSION}\n'
+    r += '\nGlobal commands:\n'
+    r += ''.join([
+        f'{k : <10}{v[0]}\n'
+        for k, v in global_cmd.items()
+    ])
+    r += '\nPer-task commands:\n'
+    r += ''.join([
+        f'{k : <10}{v[0]}\n'
+        for k, v in per_task_cmd.items()
+    ])
     return r
 
 
-def show(*_: t.Any) -> str:
+def show(_: str = '') -> str:
     # TODO prettify
     with lock:
         return '\n'.join([
@@ -83,28 +91,31 @@ def remove(task: Task) -> str:
     return 'Task state removed.'
 
 
-def reload(*_: t.Any) -> str:
+def reload(_: str = '') -> str:
     if not daemon.reload():
         return 'Error occured reconfiguring. Check log output for details.'
     return 'Reconfigured.'
 
 
-def kill(*_: t.Any) -> str:
+def kill(_: str = '') -> str:
     os.kill(0, signal.SIGTERM)
     return 'Goodbye.'
 
 
-handlers: dict[str, tuple[str, t.Callable[..., str]]] = {
+global_cmd: dict[str, tuple[str, t.Callable[[str], str]]] = {
     'help': ('Show this help', usage),
     'show': ('Print status', show),
+    'reload': ('Reload plugins, config and tasks', reload),
+    'KiLL': ('Kill all tasks and shutdown', kill),
+}
+
+per_task_cmd: dict[str, tuple[str, t.Callable[[Task], str]]] = {
     'info': ('Print <task> details', info),
     'start': ('Force a <task> to start', start),
     'stop': ('Force a <task> to stop', stop),
     'enable': ('Enable a <task>', enable),
     'disable': ('Disable a <task>', disable),
     'remove': ('Remove a <task> state', remove),
-    'reload': ('Reload plugins, config and mirrors', reload),
-    'KiLL': ('Kill all tasks and shutdown', kill),
 }
 
 
@@ -119,17 +130,18 @@ def handle(conn: socket.socket) -> None:
             if not line:  # only blank means empty line
                 continue
             log.info(f'command: {repr(line)}')
-            handler = handlers.get(line[0], handlers['help'])
-            if '<task>' in handler[0]:  # command with <task> argument
+            if line[0] in global_cmd:
+                result = global_cmd[line[0]][1]((line+[''])[1].strip())  # default to empty
+            elif line[0] in per_task_cmd:
                 with lock:
                     if len(line) < 2:  # missing parameter
-                        result = usage()
+                        result = 'Task not specified'
                     elif line[1].strip() not in tasks:
                         result = 'Task not found.'
                     else:
-                        result = handler[1](tasks[line[1].strip()])
+                        result = per_task_cmd[line[0]][1](tasks[line[1].strip()])
             else:
-                result = handler[1](line[1:])
+                result = usage()
             log.debug(f'response: {repr(result)}')
             result_b = result.encode('utf-8', errors='ignore')
             conn.sendall(int.to_bytes(len(result_b), 4, 'big'))
