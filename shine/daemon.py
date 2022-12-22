@@ -170,18 +170,17 @@ def reload(_signum: int = 0, _frame: t.Any = None) -> bool:
 
 def clean(signum: int = 0, _frame: t.Any = None) -> None:
     log.warning('stopping tasks')
-    for task in tasks.values():
-        if task.active:
-            task.kill()
-    log.warning('doing final saving')
-    evt(':clean')
     with lock:
+        for task in tasks.values():
+            if task.active:
+                task.kill()
+        log.warning('doing final saving')
+        evt(':clean')
         save()
         evt(':exit')
         log.warning('goodbye')
-        if signum:
-            signal.signal(signal.SIGTERM, signal.SIG_DFL)
-            os.killpg(0, signal.SIGTERM)
+        signal.signal(signal.SIGTERM, signal.SIG_DFL if signum else signal.SIG_IGN)
+        os.killpg(0, signal.SIGTERM)
         sys.exit(0)
 
 
