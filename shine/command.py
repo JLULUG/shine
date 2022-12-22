@@ -89,11 +89,6 @@ def reload(*_: t.Any) -> str:
     return 'Reconfigured.'
 
 
-def grace(*_: t.Any) -> str:
-    os.kill(0, signal.SIGINT)
-    return 'Gracefully shutting down.'
-
-
 def kill(*_: t.Any) -> str:
     os.kill(0, signal.SIGTERM)
     return 'Goodbye.'
@@ -109,7 +104,6 @@ handlers: dict[str, tuple[str, t.Callable[..., str]]] = {
     'disable': ('Disable a <task>', disable),
     'remove': ('Remove a <task> state', remove),
     'reload': ('Reload plugins, config and mirrors', reload),
-    'grace': ('Gracefully shutdown after finishing tasks', grace),
     'KiLL': ('Kill all tasks and shutdown', kill),
 }
 

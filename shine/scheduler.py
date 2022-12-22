@@ -2,7 +2,7 @@ import logging as log
 import threading
 from time import time, sleep
 
-from .daemon import evt, Task, tasks, lock, _windup, save, config
+from .daemon import evt, Task, tasks, lock, save, config
 
 
 def sched() -> None:
@@ -17,7 +17,7 @@ def sched() -> None:
         save()
     evt('sched:load')
     log.warning('started')
-    while not _windup.is_set():
+    while True:
         # sleep for a while
         try:
             sleep_interval = int(config.get('interval', 10))

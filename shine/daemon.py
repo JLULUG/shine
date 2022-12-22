@@ -5,7 +5,6 @@ import sys
 import json
 import signal
 import threading
-from time import sleep
 from functools import wraps
 from types import FunctionType, MethodType
 
@@ -25,11 +24,13 @@ os.makedirs(LOG_DIR, exist_ok=True)
 config: dict[str, t.Any] = {}
 tasks: dict[str, 'Task'] = {}
 lock = threading.RLock()
-_windup = threading.Event()
-_load_err = threading.Event()
+load_err = threading.Event()
 
 
 def save() -> bool:
+    if load_err.is_set():
+        log.error('refuse to save after load error, reload first')
+        return False
     evt(':save')
     log.debug('saving state')
     try:
@@ -60,7 +61,7 @@ def _scandir_py(path: str) -> list[os.DirEntry[str]]:
         ]
     except (OSError, ValueError):
         log.exception(f'failed reading dir {dir}!!')
-        _load_err.set()
+        load_err.set()
         return []
 
 
@@ -72,7 +73,7 @@ def _exec(file_name: str, local: t.Optional[dict[str, t.Any]] = None) -> bool:
         return True
     except Exception:  # pylint: disable=broad-except
         log.exception(f'exception loading file {file_name}!!')
-        _load_err.set()
+        load_err.set()
         return False
 
 
@@ -124,7 +125,7 @@ def load_tasks() -> None:
         name = task_config.get('name')
         if not name or not isinstance(name, str):
             log.error(f'name not present in task config {file.name}')
-            _load_err.set()
+            load_err.set()
             continue
         tasks.setdefault(name, Task())
         task = tasks[name]
@@ -139,7 +140,7 @@ def load_tasks() -> None:
                 default = _bare_task.__getattribute__(attr)
                 if type(val) is not type(default):
                     log.error(f'builtin attribute "{attr}" should be of type {type(default)}')
-                    _load_err.set()
+                    load_err.set()
                     continue
                 setattr(task, attr, val)
             except AttributeError:
@@ -155,26 +156,16 @@ def load_tasks() -> None:
 
 def reload(_signum: int = 0, _frame: t.Any = None) -> bool:
     log.warning('(re)loading plugins, config and tasks')
-    _load_err.clear()
     evt(':reload')
     with lock:
+        load_err.clear()
         load_plugins()
         load_config()
         load_tasks()
         if not save():
-            _load_err.set()
+            load_err.set()
     evt(':load')
-    return not _load_err.is_set()
-
-
-def grace(_signum: int = 0, _frame: t.Any = None) -> None:
-    if not _windup.is_set():
-        _windup.set()
-        log.warning('gracefully shutting down')
-        evt(':grace')
-        while [ 1 for task in tasks.values() if task.state == Task.SYNCING ]:
-            sleep(5)
-    clean(0)
+    return not load_err.is_set()
 
 
 def clean(signum: int = 0, _frame: t.Any = None) -> None:
@@ -186,12 +177,12 @@ def clean(signum: int = 0, _frame: t.Any = None) -> None:
     evt(':clean')
     with lock:
         save()
-    evt(':exit')
-    log.warning('goodbye')
-    if signum:
-        signal.signal(signal.SIGTERM, signal.SIG_DFL)
-        os.killpg(0, signal.SIGTERM)
-    sys.exit(0)
+        evt(':exit')
+        log.warning('goodbye')
+        if signum:
+            signal.signal(signal.SIGTERM, signal.SIG_DFL)
+            os.killpg(0, signal.SIGTERM)
+        sys.exit(0)
 
 
 def main() -> None:
@@ -215,7 +206,7 @@ def main() -> None:
     except FileNotFoundError:
         log.warning('state file not found')
     except (OSError, KeyError, ValueError):
-        log.critical('error loading state file', exc_info=True)
+        log.critical('error loading state file!!!', exc_info=True)
         sys.exit(1)
 
     # load plugins, config, tasks
@@ -225,7 +216,7 @@ def main() -> None:
 
     # setup signal handlers
     signal.signal(signal.SIGHUP, reload)
-    signal.signal(signal.SIGINT, grace)
+    signal.signal(signal.SIGINT, clean)
     signal.signal(signal.SIGTERM, clean)
 
     # start command thread
@@ -240,6 +231,7 @@ def main() -> None:
     # ensure main & sched alive
     th_sched.join()
     log.critical('sched thread terminated unexpectedly! going down...')
+    clean()
 
 
 # pylint: disable=wrong-import-position
