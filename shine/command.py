@@ -1,11 +1,11 @@
 import typing as t
 import logging as log
 import os
-import json
 import signal
 import socket
 import threading
 from time import time
+from types import MethodType
 
 from . import VERSION
 from . import daemon
@@ -27,18 +27,62 @@ def usage(_: str = '') -> str:
     return r
 
 
+def _time_duration(secs: float) -> str:
+    secs = int(secs)
+    h = abs(secs)//3600
+    m = abs(secs)%3600//60
+    s = abs(secs)%60
+    return (
+        ('-' if secs<0 else '')
+        +(f'{h}h' if h else '')
+        +(f'{m}m' if m else '')
+        +(f'{s}s' if s and not h else '')
+        +('now' if not secs else '')
+    )
+
+
 def show(_: str = '') -> str:
-    # TODO prettify
     with lock:
+        res = []
+        for task in tasks.values():
+            res.append((
+                ('~' if not task.on else '') + task.name,
+                'SUCCESS' if not task.fail_count else f'{task.fail_count} FAIL',
+                _time_duration(time()-task.last_finish),
+                f'RUNNING {_time_duration(time()-task.last_start)}' \
+                if task.active else _time_duration(task.next_sched-time()),
+            ))
+        res.sort(key=lambda x: x[0].lower())
+        # table printing
+        res.insert(0, ('NAME', 'STATUS', 'LAST', 'NEXT'))
+        width = [ max(len(x[i]) for x in res)+1 for i in range(4) ]
         return '\n'.join([
-            repr(task.__dict__)
-            for task in tasks.values()
+            ''.join([ f'{x[i]:<{width[i]}}' for i in range(4) ])
+            for x in res
         ])
 
 
 def info(task: Task) -> str:
-    # TODO prettify
-    return json.dumps(task.__dict__, indent=4, default=repr, skipkeys=True)
+    r = f'{task.name} ('+('on' if task.on else 'off')
+    if not task.fail_count:
+        r += f'; success {_time_duration(time()-task.last_success)}'
+    else:
+        r += f'; failed({task.fail_count}) {_time_duration(time()-task.last_finish)}'
+    if task.active:
+        r += f'; running {_time_duration(time()-task.last_start)})\n'
+    else:
+        r += f'; next {_time_duration(task.next_sched-time())})\n'
+    for attr, val in task.__dict__.items():
+        if attr in {'name', 'on', 'fail_count', '_loaded', '_config'}:
+            continue
+        if isinstance(val, MethodType):
+            r += f'{attr}: {val.__doc__ or val}\n'
+        else:
+            r += f'{attr}: {val}\n'
+    r += '\nConfig:\n'
+    # pylint: disable-next=protected-access
+    r += ''.join([ f'{k}: {v}\n' for k, v in task._config.items() ])
+    return r
 
 
 def start(task: Task) -> str:
