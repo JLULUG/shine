@@ -77,7 +77,7 @@ def _exec(file_name: str, local: t.Optional[dict[str, t.Any]] = None) -> bool:
 
 
 def load_plugins() -> None:
-    evt.clear()
+    evt.registry.clear()
     for file in _scandir_py(PLUGINS_DIR):
         log.info(f'loading plugin {file.name}')
         _exec(file.path)

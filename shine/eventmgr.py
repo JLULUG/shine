@@ -15,9 +15,6 @@ class EventManager:
         self.registry.setdefault(event, [])
         self.registry[event].append(callback)
 
-    def clear(self) -> None:
-        self.registry = {}
-
     def __call__(self, event: str, arg: t.Optional[t.Any] = None) -> None:
         log.debug(f'event {event}')
         try:
