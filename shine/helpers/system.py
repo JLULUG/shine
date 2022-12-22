@@ -51,6 +51,7 @@ def System(
             log.exception('System: error executing the command')
             raise
 
+    run.__doc__ = f'System({cmd}'+(f', timeout={timeout})' if timeout else ')')
     return run
 
 

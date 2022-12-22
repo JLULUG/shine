@@ -52,6 +52,16 @@ def Rsync(
     **popen_kwargs: t.Any
 ) -> t.Callable[[Task], tuple[int, str]]:
     # pylint: disable=too-many-locals
+    doc = (
+        f'Rsync({repr(upstream)}, {repr(local)}'
+        + (f', options={options}' if options else '')
+        + (f', pre_stage={pre_stage}' if pre_stage else '')
+        + (f', no_default_options={no_default_options}' if no_default_options else '')
+        + (f', exclude={exclude}' if exclude else '')
+        + (f', env={env}' if env else '')
+        + (f', timeout={timeout}' if timeout else '')
+        + ')'
+    )
     options = options or []
     exclude = exclude or []
     env = env or {}
@@ -123,4 +133,5 @@ def Rsync(
 
         return (ret, out)
 
+    run.__doc__ = doc
     return run

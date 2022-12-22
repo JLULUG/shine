@@ -56,6 +56,7 @@ def Cron(
                 log.debug(f'Cron: next "{cron_spec}" is {x}')
                 return int(x.timestamp())
 
+    nxt.__doc__ = f'Cron({repr(cron_spec)})'
     return nxt
 
 

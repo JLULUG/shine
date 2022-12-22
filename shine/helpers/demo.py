@@ -18,4 +18,5 @@ def Demo(
         sleep(duration*60)
         return not random() < error_rate
 
+    run.__doc__ = f'Demo(time_min={time_min}, time_max={time_max}, error_rate={error_rate})'
     return run

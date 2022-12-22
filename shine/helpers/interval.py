@@ -60,6 +60,10 @@ def Interval(
         log.debug(f'Interval: {x0} + {secs}({avail_hours}) = {x}')
         return int(x.timestamp())
 
+    nxt.__doc__ = (
+        f'Interval(interval={repr(interval)}, '
+        f'randomize={repr(randomize)}, avail_hours={repr(avail_hours)})'
+    )
     return nxt
 
 

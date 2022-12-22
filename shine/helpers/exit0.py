@@ -11,4 +11,5 @@ def Exit0(
         ret, *_ = f(self)
         return ret == 0
 
+    run.__doc__ = f'Exit0({f.__doc__ or str(f)})'
     return run
