@@ -46,7 +46,7 @@ def show(_: str = '') -> str:
         res = []
         for task in tasks.values():
             res.append((
-                ('~' if not task.on else '') + task.name,
+                ('!' if task.fail_count else '') + ('~' if not task.on else '') + task.name,
                 'SUCCESS' if not task.fail_count else f'{task.fail_count} FAIL',
                 _time_duration(time()-task.last_finish),
                 f'RUNNING {_time_duration(time()-task.last_start)}' \
@@ -113,7 +113,7 @@ def enable(task: Task) -> str:
         task.next_sched = int(time())
     save()
     log.info(f'{task.name} on')
-    return info(task)+'\nEnabled.'
+    return 'Enabled.'
 
 
 def disable(task: Task) -> str:
@@ -122,7 +122,7 @@ def disable(task: Task) -> str:
     task.on = False
     save()
     log.info(f'{task.name} disabled')
-    return info(task)+'\nDisabled.'
+    return 'Disabled.'
 
 
 def remove(task: Task) -> str:
@@ -132,7 +132,7 @@ def remove(task: Task) -> str:
     tasks.pop(task.name)
     save()
     log.warning(f'{task.name} removed')
-    return 'Task state removed.'
+    return 'Task state removed, please delete config manually.'
 
 
 def reload(_: str = '') -> str:
