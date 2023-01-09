@@ -100,7 +100,7 @@ def Rsync(
         if pre_stage:
             pre_ret, pre_out = System(
                 pre_stage_argv + stop_at,
-                log_prefix='rsync',
+                log_prefix='rsync-pre',
                 env=env,
                 **popen_kwargs
             )(self)
