@@ -31,7 +31,7 @@ def sched() -> None:
                 task
                 for task in tasks.values()
                 if task.on and not task.active
-                and task.next_sched <= int(time())
+                and task.next_sched <= int(time()) + interval
             ]
             evt('sched:runnables', runnables)  # filter by plugins
             runnables = [  # filter by custom condition
@@ -46,7 +46,7 @@ def sched() -> None:
             evt('sched:select', locals())
             next_task = max(
                 runnables,
-                key=lambda t: (t.priority or 1.0)*(time()-t.next_sched)
+                key=lambda t: (t.priority or 1.0)*(time()+interval-t.next_sched)
             )
             log.debug(f'next_task: {next_task.name}')
             save()
