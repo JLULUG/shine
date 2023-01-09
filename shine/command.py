@@ -109,8 +109,6 @@ def enable(task: Task) -> str:
     if task.on:
         return 'Task not disabled.'
     task.on = True
-    if not task.active:
-        task.next_sched = int(time())
     save()
     log.info(f'{task.name} on')
     return 'Enabled.'
