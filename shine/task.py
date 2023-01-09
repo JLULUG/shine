@@ -8,6 +8,7 @@ from .daemon import LOG_DIR, evt, save, lock
 
 
 class Task:
+    # pylint: disable=too-many-instance-attributes
     def __init__(self, _dict: t.Optional[dict[str, t.Any]] = None) -> None:
         self.name: str = ''  # required in config
         self.on: bool = True
@@ -59,7 +60,7 @@ class Task:
     # + custom next() retry for failed run
     def retry(self) -> int:
         normal = self.next()
-        failed = int(time())+30*int(2**self.fail_count)
+        failed = int(time())+(self.retry_base or 30)*int(2**self.fail_count)
         return min(normal, failed)
 
     # + method to stop the task
