@@ -19,6 +19,7 @@ class EventManager:
             self.registry[event].remove(callback)
 
     def register(self, event: str, callback: AnyCallable, insert: bool=False) -> None:
+        self.deregister(event, callback)
         log.debug(f'register {callback} to event {event}')
         self.registry.setdefault(event, [])
         if insert:
