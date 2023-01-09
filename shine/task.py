@@ -71,6 +71,14 @@ class Task:
     def post(self, _result: bool) -> None:
         pass
 
+    # + arbitrary job if successful
+    def success(self) -> None:
+        pass
+
+    # + arbitrary job if not successful
+    def fail(self) -> None:
+        pass
+
     # task controller, do NOT override
     def thread(self) -> None:
         log.info('task started')
@@ -93,11 +101,15 @@ class Task:
                 self.last_success = int(time())
                 self.next_sched = self.next()
                 self.fail_count = 0
+                log.debug('task success()')
+                self.success()
                 evt('task:success', self)
                 log.info('task succeeded')
             else:
                 self.next_sched = self.retry()
                 self.fail_count += 1
+                log.debug('task fail()')
+                self.fail()
                 evt('task:fail', self)
                 log.info(f'task failed({self.fail_count})')
             log.info(f'next schedule '
