@@ -9,11 +9,11 @@ import readline
 def execute(sock: socket.socket, command: str) -> None:
     if not command:
         return
-    sock.sendall((command+'\n').encode('utf-8'))
+    sock.sendall((command + '\n').encode('utf-8'))
     msg_len = int.from_bytes(sock.recv(4), 'big')
     msg = b''
     while len(msg) < msg_len:
-        msg += sock.recv(msg_len-len(msg))
+        msg += sock.recv(msg_len - len(msg))
     print(msg.decode('utf-8', errors='ignore'))
 
 

@@ -33,15 +33,20 @@ def save() -> bool:
     log.debug('saving state')
     try:
         with open(STATE_FILE, 'w', encoding='utf-8') as f:
-            json.dump([
-                {
-                    k: v
-                    for k, v in task.__dict__.items()
-                    if not k.startswith('_')
-                    and isinstance(v, (int, float, bool, str, dict, list))
-                }
-                for task in tasks.values()
-            ], f, default=lambda _: None, skipkeys=True)
+            json.dump(
+                [
+                    {
+                        k: v
+                        for k, v in task.__dict__.items()
+                        if not k.startswith('_')
+                        and isinstance(v, (int, float, bool, str, dict, list))
+                    }
+                    for task in tasks.values()
+                ],
+                f,
+                default=lambda _: None,
+                skipkeys=True,
+            )
         return True
     except (OSError, ValueError):
         log.exception('failed saving state!!')
@@ -84,11 +89,7 @@ def load_plugins() -> None:
     evt(':plugins_load')
 
 
-def _bind_method(
-    task: 'Task',
-    method: str,
-    f: t.Callable[..., t.Any]
-) -> MethodType:
+def _bind_method(task: 'Task', method: str, f: t.Callable[..., t.Any]) -> MethodType:
     # no throw wrapping for custom method
     @wraps(f)
     def wrapper(*args, **kwargs):  # type: ignore
@@ -130,7 +131,9 @@ def load_tasks() -> None:
                 # pylint: disable-next=unnecessary-dunder-call
                 default = _bare_task.__getattribute__(attr)
                 if type(val) is not type(default):
-                    log.error(f'builtin attribute "{attr}" should be of type {type(default)}')
+                    log.error(
+                        f'builtin attribute "{attr}" should be of type {type(default)}'
+                    )
                     load_err.set()
                     continue
                 setattr(task, attr, val)
@@ -179,10 +182,12 @@ def main() -> None:
     log.basicConfig(
         format='[%(levelname)s] %(threadName)s: %(message)s',
         level=(
-            log.DEBUG if os.environ.get('DEBUG')
-            else log.WARNING if os.environ.get('QUIET')
+            log.DEBUG
+            if os.environ.get('DEBUG')
+            else log.WARNING
+            if os.environ.get('QUIET')
             else log.INFO
-        )
+        ),
     )
 
     # load state

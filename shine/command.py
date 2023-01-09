@@ -15,29 +15,23 @@ from .daemon import COMM_SOCK, Task, tasks, save, lock
 def usage(_: str = '') -> str:
     r = f'Shine v{VERSION}\n'
     r += '\nGlobal commands:\n'
-    r += ''.join([
-        f'{k : <10}{v[0]}\n'
-        for k, v in global_cmd.items()
-    ])
+    r += ''.join([f'{k : <10}{v[0]}\n' for k, v in global_cmd.items()])
     r += '\nPer-task commands:\n'
-    r += ''.join([
-        f'{k : <10}{v[0]}\n'
-        for k, v in per_task_cmd.items()
-    ])
+    r += ''.join([f'{k : <10}{v[0]}\n' for k, v in per_task_cmd.items()])
     return r
 
 
 def _time_duration(secs: float) -> str:
     secs = int(secs)
-    h = abs(secs)//3600
-    m = abs(secs)%3600//60
-    s = abs(secs)%60
+    h = abs(secs) // 3600
+    m = abs(secs) % 3600 // 60
+    s = abs(secs) % 60
     return (
-        ('-' if secs<0 else '')
-        +(f'{h}h' if h else '')
-        +(f'{m}m' if m else '')
-        +(f'{s}s' if s and not h else '')
-        +('now' if not secs else '')
+        ('-' if secs < 0 else '')
+        + (f'{h}h' if h else '')
+        + (f'{m}m' if m else '')
+        + (f'{s}s' if s and not h else '')
+        + ('now' if not secs else '')
     )
 
 
@@ -45,25 +39,29 @@ def show(_: str = '') -> str:
     with lock:
         res = []
         for task in tasks.values():
-            res.append((
-                ('!' if task.fail_count else '') + ('~' if not task.on else '') + task.name,
-                'SUCCESS' if not task.fail_count else f'{task.fail_count} FAIL',
-                _time_duration(time()-task.last_finish),
-                f'RUNNING {_time_duration(time()-task.last_start)}' \
-                if task.active else _time_duration(task.next_sched-time()),
-            ))
+            res.append(
+                (
+                    ('!' if task.fail_count else '')
+                    + ('~' if not task.on else '')
+                    + task.name,
+                    'SUCCESS' if not task.fail_count else f'{task.fail_count} FAIL',
+                    _time_duration(time() - task.last_finish),
+                    f'RUNNING {_time_duration(time()-task.last_start)}'
+                    if task.active
+                    else _time_duration(task.next_sched - time()),
+                )
+            )
         res.sort(key=lambda x: x[0].lower())
         # table printing
         res.insert(0, ('NAME', 'STATUS', 'LAST', 'NEXT'))
-        width = [ max(len(x[i]) for x in res)+1 for i in range(4) ]
-        return '\n'.join([
-            ''.join([ f'{x[i]:<{width[i]}}' for i in range(4) ])
-            for x in res
-        ])
+        width = [max(len(x[i]) for x in res) + 1 for i in range(4)]
+        return '\n'.join(
+            [''.join([f'{x[i]:<{width[i]}}' for i in range(4)]) for x in res]
+        )
 
 
 def info(task: Task) -> str:
-    r = f'{task.name} ('+('on' if task.on else 'off')
+    r = f'{task.name} (' + ('on' if task.on else 'off')
     if not task.fail_count:
         r += f'; success {_time_duration(time()-task.last_success)}'
     else:
@@ -81,7 +79,7 @@ def info(task: Task) -> str:
             r += f'{attr}: {val}\n'
     r += '\nConfig:\n'
     # pylint: disable-next=protected-access
-    r += ''.join([ f'{k}: {v}\n' for k, v in task._config.items() ])
+    r += ''.join([f'{k}: {v}\n' for k, v in task._config.items()])
     return r
 
 
@@ -89,10 +87,7 @@ def start(task: Task) -> str:
     if task.active:
         return 'Task already running.'
     log.warning(f'force starting {task.name}')
-    threading.Thread(
-        target=task.thread,
-        name=task.name
-    ).start()
+    threading.Thread(target=task.thread, name=task.name).start()
     return 'Started.'
 
 
@@ -173,7 +168,9 @@ def handle(conn: socket.socket) -> None:
                 continue
             log.info(f'command: {repr(line)}')
             if line[0] in global_cmd:
-                result = global_cmd[line[0]][1]((line+[''])[1].strip())  # default to empty
+                result = global_cmd[line[0]][1](
+                    (line + [''])[1].strip()
+                )  # default to empty
             elif line[0] in per_task_cmd:
                 with lock:
                     if len(line) < 2:  # missing parameter
@@ -208,7 +205,5 @@ def comm() -> None:
         conn, _ = sock.accept()
         log.info('new connection')
         threading.Thread(
-            target=handle,
-            args=(conn,),
-            name=f'comm-{conn.fileno()}'
+            target=handle, args=(conn,), name=f'comm-{conn.fileno()}'
         ).start()

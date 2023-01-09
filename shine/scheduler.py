@@ -30,14 +30,13 @@ def sched() -> None:
             runnables = [  # filter by trivial criteria
                 task
                 for task in tasks.values()
-                if task.on and not task.active
+                if task.on
+                and not task.active
                 and task.next_sched <= int(time()) + interval
             ]
             evt('sched:runnables', runnables)  # filter by plugins
             runnables = [  # filter by custom condition
-                task
-                for task in runnables
-                if task.condition()
+                task for task in runnables if task.condition()
             ]
             log.debug(f'runnables: {[ task.name for task in runnables ]}')
             if not runnables:
@@ -46,14 +45,11 @@ def sched() -> None:
             evt('sched:select', locals())
             next_task = max(
                 runnables,
-                key=lambda t: (t.priority or 1.0)*(time()+interval-t.next_sched)
+                key=lambda t: (t.priority or 1.0) * (time() + interval - t.next_sched),
             )
             log.debug(f'next_task: {next_task.name}')
             save()
             # start the task
-            threading.Thread(
-                target=next_task.thread,
-                name=next_task.name
-            ).start()
+            threading.Thread(target=next_task.thread, name=next_task.name).start()
             log.debug('new task started')
             evt('sched:post', locals())

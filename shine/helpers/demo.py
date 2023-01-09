@@ -7,16 +7,17 @@ from ..daemon import Task
 
 
 def Demo(
-    time_min: int,
-    time_max: int,
-    error_rate: float = 0.0
+    time_min: int, time_max: int, error_rate: float = 0.0
 ) -> t.Callable[[Task], bool]:
     """Sleep for a random period of time, fail at chance"""
+
     def run(_self: Task) -> bool:
         duration = randint(time_min, time_max)
         log.debug(f'Demo: sleeping for {duration} minutes')
-        sleep(duration*60)
+        sleep(duration * 60)
         return not random() < error_rate
 
-    run.__doc__ = f'Demo(time_min={time_min}, time_max={time_max}, error_rate={error_rate})'
+    run.__doc__ = (
+        f'Demo(time_min={time_min}, time_max={time_max}, error_rate={error_rate})'
+    )
     return run

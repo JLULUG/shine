@@ -44,7 +44,7 @@ class Task:
     def log_file(self, prefix: str = '') -> str:
         file_name = f'{self.name}-{strftime("%Y%m%d-%H%M%S")}.log'
         if prefix and isinstance(prefix, str):
-            file_name = prefix+'-'+file_name
+            file_name = prefix + '-' + file_name
         return os.path.join(LOG_DIR, file_name)
 
     # * task runner
@@ -55,12 +55,12 @@ class Task:
     # * decide next task schedule
     def next(self) -> int:
         log.warning(f'using default scheduler for task {self.name}')
-        return int(time())+24*60*60
+        return int(time()) + 24 * 60 * 60
 
     # + custom next() retry for failed run
     def retry(self) -> int:
         normal = self.next()
-        failed = int(time())+(self.retry_base or 30)*int(2**self.fail_count)
+        failed = int(time()) + (self.retry_base or 30) * int(2**self.fail_count)
         return min(normal, failed)
 
     # + method to stop the task
@@ -112,8 +112,10 @@ class Task:
                 self.fail()
                 evt('task:fail', self)
                 log.info(f'task failed({self.fail_count})')
-            log.info(f'next schedule '
-                     f'{strftime("%Y-%m-%d %H:%M:%S", localtime(self.next_sched))}')
+            log.info(
+                'next schedule '
+                f'{strftime("%Y-%m-%d %H:%M:%S", localtime(self.next_sched))}'
+            )
             self.last_finish = int(time())
             self._thread = None
             save()

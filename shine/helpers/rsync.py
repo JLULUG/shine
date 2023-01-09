@@ -9,8 +9,16 @@ from ..daemon import Task
 from .system import System
 
 DEFAULT_OPTIONS = [
-    '-virltpH', '--no-h', '--stats', '--safe-links',
-    '--delete-after', '--delay-updates', '-f', '-p .~tmp~/', '-f', 'R .~tmp~/'
+    '-virltpH',
+    '--no-h',
+    '--stats',
+    '--safe-links',
+    '--delete-after',
+    '--delay-updates',
+    '-f',
+    '-p .~tmp~/',
+    '-f',
+    'R .~tmp~/',
 ]
 
 EXIT_CODE = {  # base on rsync 3.2.6
@@ -45,14 +53,14 @@ def Rsync(
     options: t.Optional[list[str]] = None,
     exclude: t.Optional[list[str]] = None,
     password: t.Optional[str] = None,
-    timeout: t.Optional[int] = 24*60*60,
+    timeout: t.Optional[int] = 24 * 60 * 60,
     env: t.Optional[dict[str, str]] = None,
     pre_stage: t.Optional[list[str]] = None,
     io_timeout: int = 300,
     excutable: str = 'rsync',
     no_default_options: bool = False,
     no_extract_size: bool = False,
-    **popen_kwargs: t.Any
+    **popen_kwargs: t.Any,
 ) -> t.Callable[[Task], tuple[int, str]]:
     # pylint: disable=too-many-locals
     doc = (
@@ -72,7 +80,7 @@ def Rsync(
 
     if password is not None:
         env['RSYNC_PASSWORD'] = password
-    if timeout and timeout > 365*24*60*60:
+    if timeout and timeout > 365 * 24 * 60 * 60:
         raise ValueError('Rsync: timeout too big')
     if io_timeout:
         options.append(f'--timeout={io_timeout}')
@@ -85,16 +93,18 @@ def Rsync(
     except OSError as exc:
         raise OSError('Rsync: local dir does not exist') from exc
 
-    argv = ([excutable] + options + exclude + [upstream, local])
+    argv = [excutable] + options + exclude + [upstream, local]
     if pre_stage:
-        pre_stage_argv = list(filter(
-            lambda x: not x.startswith('--delete'),
-            [excutable] + options + pre_stage + exclude + [upstream, local]
-        ))
+        pre_stage_argv = list(
+            filter(
+                lambda x: not x.startswith('--delete'),
+                [excutable] + options + pre_stage + exclude + [upstream, local],
+            )
+        )
 
     def run(self: Task) -> tuple[int, str]:
         if timeout:
-            stop_time = datetime.today()+timedelta(seconds=timeout)
+            stop_time = datetime.today() + timedelta(seconds=timeout)
             stop_at = [f'--stop-at={stop_time.strftime("%Y-%m-%dT%H:%M")}']
         else:
             stop_at = []
@@ -104,7 +114,7 @@ def Rsync(
             while tries < 50:
                 ret, out = func(self)
                 if ret == 5:
-                    with open(out, 'r', encoding='utf-8', errors='ignore') as f:
+                    with open(out, encoding='utf-8', errors='ignore') as f:
                         log_content = f.read()
                     if '@ERROR: max connections' in log_content:
                         log.warning('Rsync: hit remote connection limit, retrying')
@@ -120,21 +130,20 @@ def Rsync(
             return (ret, out)
 
         if pre_stage:
-            pre_ret, pre_out = _with_retry(System(
-                pre_stage_argv + stop_at,
-                log_prefix='rsync-pre',
-                env=env,
-                **popen_kwargs
-            ))
+            pre_ret, pre_out = _with_retry(
+                System(
+                    pre_stage_argv + stop_at,
+                    log_prefix='rsync-pre',
+                    env=env,
+                    **popen_kwargs,
+                )
+            )
             if pre_ret != 0:
                 return (pre_ret, pre_out)
 
-        ret, out = _with_retry(System(
-            argv + stop_at,
-            log_prefix='rsync',
-            env=env,
-            **popen_kwargs
-        ))
+        ret, out = _with_retry(
+            System(argv + stop_at, log_prefix='rsync', env=env, **popen_kwargs)
+        )
         if ret != 0:
             return (ret, out)
 
@@ -142,11 +151,9 @@ def Rsync(
 
         if not no_extract_size:
             try:
-                with open(out, 'r', encoding='utf-8', errors='ignore') as f:
+                with open(out, encoding='utf-8', errors='ignore') as f:
                     match = re.findall(
-                        r'^Total file size: ([0-9]+) bytes',
-                        f.read(),
-                        re.MULTILINE
+                        r'^Total file size: ([0-9]+) bytes', f.read(), re.MULTILINE
                     )
                 setattr(self, 'size', int(match[-1]))
                 log.info(f'Rsync: total size {self.size}')

@@ -18,7 +18,7 @@ class EventManager:
             log.debug(f'deregister {callback} from event {event}')
             self.registry[event].remove(callback)
 
-    def register(self, event: str, callback: AnyCallable, insert: bool=False) -> None:
+    def register(self, event: str, callback: AnyCallable, insert: bool = False) -> None:
         self.deregister(event, callback)
         log.debug(f'register {callback} to event {event}')
         self.registry.setdefault(event, [])
@@ -37,10 +37,13 @@ class EventManager:
                     log.exception(f'exception caught in plugins handling {event}')
 
 
-def event_handler(event: str, insert: bool=False) -> t.Callable[[AnyCallable], AnyCallable]:
+def event_handler(
+    event: str, insert: bool = False
+) -> t.Callable[[AnyCallable], AnyCallable]:
     def decorator(f: AnyCallable) -> AnyCallable:
         evt.register(event, f, insert)
         return f
+
     return decorator
 
 

@@ -9,14 +9,15 @@ from ..daemon import Task, _bind_method
 
 def System(
     # pylint: disable=too-many-arguments
-    cmd: list[str],                        # argv
+    cmd: list[str],  # argv
     input_data: t.Optional[bytes] = None,  # stdin data
-    timeout: t.Optional[int] = None,       # in seconds, passed to communicate()
-    log_prefix: str = 'system',            # passed to task.log_file()
-    log_append: bool = False,              # open log file with wb or ab
-    **popen_kwargs: t.Any                  # passed to Popen() constructor
+    timeout: t.Optional[int] = None,  # in seconds, passed to communicate()
+    log_prefix: str = 'system',  # passed to task.log_file()
+    log_append: bool = False,  # open log file with wb or ab
+    **popen_kwargs: t.Any,  # passed to Popen() constructor
 ) -> t.Callable[[Task], tuple[int, str]]:
     """Run command specified with timeout, returns exit code and output"""
+
     def run(self: Task) -> tuple[int, str]:
         if input_data is not None:
             popen_kwargs['stdin'] = PIPE
@@ -28,7 +29,7 @@ def System(
                 cmd,
                 stdout=open(log_file, 'ab' if log_append else 'wb'),
                 stderr=STDOUT,
-                **popen_kwargs
+                **popen_kwargs,
             ) as process:
                 log.debug(f'System: process pid: {process.pid}')
                 setattr(self, '_system_pid', process.pid)
@@ -53,7 +54,7 @@ def System(
             log.exception('System: error executing the command')
             raise
 
-    run.__doc__ = f'System({cmd}'+(f', timeout={timeout})' if timeout else ')')
+    run.__doc__ = f'System({cmd}' + (f', timeout={timeout})' if timeout else ')')
     return run
 
 
