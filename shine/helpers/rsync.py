@@ -2,6 +2,7 @@ import typing as t
 import logging as log
 import re
 import os
+from time import sleep
 from datetime import datetime, timedelta
 
 from ..daemon import Task
@@ -35,6 +36,7 @@ EXIT_CODE = {  # base on rsync 3.2.6
 }
 
 
+# pylint: disable=too-many-statements
 def Rsync(
     # pylint: disable=too-many-arguments
     upstream: str,  # ends with / 'rsync://example.com/example/',
@@ -97,26 +99,43 @@ def Rsync(
         else:
             stop_at = []
 
+        def _with_retry(func: t.Callable[[Task], tuple[int, str]]) -> tuple[int, str]:
+            tries = 0
+            while tries < 50:
+                ret, out = func(self)
+                if ret == 5:
+                    with open(out, 'r', encoding='utf-8', errors='ignore') as f:
+                        log_content = f.read()
+                    if '@ERROR: max connections' in log_content:
+                        log.warning('Rsync: hit remote connection limit, retrying')
+                        if len(log_content) < 200:
+                            os.unlink(out)
+                        sleep(10)
+                        tries += 1
+                        continue
+                elif ret != 0:
+                    log.error(f'Rsync: {EXIT_CODE.get(ret, f"unknown {ret}")}')
+                    return (ret, out)
+                break
+            return (ret, out)
+
         if pre_stage:
-            pre_ret, pre_out = System(
+            pre_ret, pre_out = _with_retry(System(
                 pre_stage_argv + stop_at,
                 log_prefix='rsync-pre',
                 env=env,
                 **popen_kwargs
-            )(self)
+            ))
             if pre_ret != 0:
-                log.error('Rsync: Pre-stage Error '
-                    f'{EXIT_CODE.get(pre_ret, f"unknown {pre_ret}")}')
                 return (pre_ret, pre_out)
 
-        ret, out = System(
+        ret, out = _with_retry(System(
             argv + stop_at,
             log_prefix='rsync',
             env=env,
             **popen_kwargs
-        )(self)
+        ))
         if ret != 0:
-            log.error(f'Rsync: Error {EXIT_CODE.get(ret, f"unknown {ret}")}')
             return (ret, out)
 
         log.debug('Rsync: success')
