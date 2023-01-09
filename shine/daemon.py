@@ -130,6 +130,7 @@ def load_tasks() -> None:
         tasks.setdefault(name, Task())
         task = tasks[name]
         setattr(task, '_loaded', True)
+        task._config = {}  # pylint: disable=protected-access
         for attr, val in task_config.items():
             if attr in helpers.__all__:
                 continue
