@@ -10,10 +10,13 @@ class EventManager:
     def __init__(self) -> None:
         self.registry: dict[str, list[AnyCallable]] = {}
 
-    def register(self, event: str, callback: AnyCallable) -> None:
+    def register(self, event: str, callback: AnyCallable, insert: bool=False) -> None:
         log.debug(f'register {callback} to event {event}')
         self.registry.setdefault(event, [])
-        self.registry[event].append(callback)
+        if insert:
+            self.registry[event].insert(0, callback)
+        else:
+            self.registry[event].append(callback)
 
     def __call__(self, event: str, arg: t.Optional[t.Any] = None) -> None:
         log.debug(f'event {event}')
@@ -25,9 +28,9 @@ class EventManager:
                     log.exception(f'exception caught in plugins handling {event}')
 
 
-def event_handler(event: str) -> t.Callable[[AnyCallable], AnyCallable]:
+def event_handler(event: str, insert: bool=False) -> t.Callable[[AnyCallable], AnyCallable]:
     def decorator(f: AnyCallable) -> AnyCallable:
-        evt.register(event, f)
+        evt.register(event, f, insert)
         return f
     return decorator
 
