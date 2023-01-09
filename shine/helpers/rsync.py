@@ -39,14 +39,14 @@ def Rsync(
     # pylint: disable=too-many-arguments
     upstream: str,  # ends with / 'rsync://example.com/example/',
     local: str,
-	options: t.Optional[list[str]] = None,
+    options: t.Optional[list[str]] = None,
     exclude: t.Optional[list[str]] = None,
     password: t.Optional[str] = None,
     timeout: t.Optional[int] = 24*60*60,
-	env: t.Optional[dict[str, str]] = None,
+    env: t.Optional[dict[str, str]] = None,
     pre_stage: t.Optional[list[str]] = None,
-	io_timeout: int = 60,
-	excutable: str = 'rsync',
+    io_timeout: int = 300,
+    excutable: str = 'rsync',
     no_default_options: bool = False,
     no_extract_size: bool = False,
     **popen_kwargs: t.Any
