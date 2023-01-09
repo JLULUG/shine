@@ -1,5 +1,6 @@
 import os
 import sys
+import atexit
 import socket
 import argparse
 import readline
@@ -33,7 +34,14 @@ def main() -> None:
         parser.print_usage(file=sys.stderr)
         sys.exit(1)
 
-    readline.set_history_length(1000)
+    histfile = os.path.join(os.path.expanduser('~'), '.shine_history')
+    readline.set_history_length(-1)
+    try:
+        readline.read_history_file(histfile)
+    except FileNotFoundError:
+        pass
+    atexit.register(readline.write_history_file, histfile)
+
     with socket.socket(socket.AF_UNIX, socket.SOCK_STREAM) as sock:
         try:
             sock.connect(addr)
@@ -41,14 +49,23 @@ def main() -> None:
             print('failed connecting control socket! try specify.', file=sys.stderr)
             parser.print_usage(file=sys.stderr)
             sys.exit(1)
+
         if args.command:
-            execute(sock, ' '.join(args.command))
+            line = ' '.join(args.command)
+            readline.add_history(line)
+            execute(sock, line)
             return
+
         print('type "help" for usage', file=sys.stderr)
         while True:
             try:
                 execute(sock, input('> '))
-            except (EOFError, KeyboardInterrupt):
+            except KeyboardInterrupt:
+                print('^C', file=sys.stderr)  # newline
+            except EOFError:
+                return
+            except BrokenPipeError:
+                print('Daemon closed connection unexpectedly.', file=sys.stderr)
                 return
 
 
