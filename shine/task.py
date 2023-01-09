@@ -68,7 +68,7 @@ class Task:
         return False
 
     # + arbitrary job after run()
-    def post(self) -> None:
+    def post(self, _result: bool) -> None:
         pass
 
     # task controller, do NOT override
@@ -86,7 +86,7 @@ class Task:
         log.debug('task run()')
         result = self.run()
         log.debug('task post()')
-        self.post()
+        self.post(result)
         evt('task:post', self)
         with lock:
             if result:
