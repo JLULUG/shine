@@ -9,8 +9,6 @@ Group=mirrors
 
 ExecStart=shined
 ExecReload=shine reload
-ExecStop=shine grace
-TimeoutStopSec=600
 Restart=always
 
 WorkingDirectory=/home/mirrors/shine/instance
