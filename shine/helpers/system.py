@@ -8,10 +8,12 @@ from ..daemon import Task, _bind_method
 
 
 def System(
+    # pylint: disable=too-many-arguments
     cmd: list[str],                        # argv
     input_data: t.Optional[bytes] = None,  # stdin data
     timeout: t.Optional[int] = None,       # in seconds, passed to communicate()
-    log_prefix: str = 'system',            # log file name prefix
+    log_prefix: str = 'system',            # passed to task.log_file()
+    log_append: bool = False,              # open log file with wb or ab
     **popen_kwargs: t.Any                  # passed to Popen() constructor
 ) -> t.Callable[[Task], tuple[int, str]]:
     """Run command specified with timeout, returns exit code and output"""
@@ -24,7 +26,7 @@ def System(
         try:
             with Popen(
                 cmd,
-                stdout=open(log_file, 'wb'),
+                stdout=open(log_file, 'ab' if log_append else 'wb'),
                 stderr=STDOUT,
                 **popen_kwargs
             ) as process:
