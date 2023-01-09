@@ -10,6 +10,14 @@ class EventManager:
     def __init__(self) -> None:
         self.registry: dict[str, list[AnyCallable]] = {}
 
+    def registered(self, event: str, callback: AnyCallable) -> bool:
+        return callback in self.registry.get(event, [])
+
+    def deregister(self, event: str, callback: AnyCallable) -> None:
+        if self.registered(event, callback):
+            log.debug(f'deregister {callback} from event {event}')
+            self.registry[event].remove(callback)
+
     def register(self, event: str, callback: AnyCallable, insert: bool=False) -> None:
         log.debug(f'register {callback} to event {event}')
         self.registry.setdefault(event, [])
