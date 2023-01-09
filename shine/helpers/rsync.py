@@ -8,7 +8,7 @@ from ..daemon import Task
 from .system import System
 
 DEFAULT_OPTIONS = [
-    '-vrltpH', '--no-h', '--stats', '--safe-links',
+    '-virltpH', '--no-h', '--stats', '--safe-links',
     '--delete-after', '--delay-updates', '-f', '-p .~tmp~/', '-f', 'R .~tmp~/'
 ]
 
