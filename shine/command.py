@@ -147,7 +147,7 @@ def kill(_: str = '') -> str:
 global_cmd: dict[str, tuple[str, t.Callable[[str], str]]] = {
     'help': ('Show this help', usage),
     'show': ('Print status', show),
-    'reload': ('Reload plugins, config and tasks', reload),
+    'reload': ('Reload plugins and tasks', reload),
     'KiLL': ('Kill all tasks and shutdown', kill),
 }
 

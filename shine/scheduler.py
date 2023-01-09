@@ -2,7 +2,9 @@ import logging as log
 import threading
 from time import time, sleep
 
-from .daemon import evt, Task, tasks, lock, save, config
+from .daemon import evt, tasks, lock, save
+
+interval = 10  # pylint: disable=invalid-name
 
 
 def sched() -> None:
@@ -19,12 +21,7 @@ def sched() -> None:
     log.warning('started')
     while True:
         # sleep for a while
-        try:
-            sleep_interval = int(config.get('interval', 10))
-        except ValueError:
-            log.exception('interval should be int')
-            sleep_interval = 10
-        sleep(sleep_interval)
+        sleep(interval)
         with lock:
             log.debug('schedule slot')
             evt('sched:pre')

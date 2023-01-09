@@ -9,7 +9,6 @@ from functools import wraps
 from types import FunctionType, MethodType
 
 CONFIG_DIR = os.getenv('CONFIGURATION_DIRECTORY', '.')
-CONFIG_FILE = os.path.join(CONFIG_DIR, 'config.py')
 PLUGINS_DIR = os.path.join(CONFIG_DIR, 'plugins')
 TASKS_DIR = os.path.join(CONFIG_DIR, 'tasks')
 STATE_DIR = os.getenv('STATE_DIRECTORY', '.')
@@ -21,7 +20,6 @@ LOG_DIR = os.getenv('LOGS_DIRECTORY', './log/')
 os.makedirs(API_DIR, exist_ok=True)
 os.makedirs(LOG_DIR, exist_ok=True)
 
-config: dict[str, t.Any] = {}
 tasks: dict[str, 'Task'] = {}
 lock = threading.RLock()
 load_err = threading.Event()
@@ -86,14 +84,6 @@ def load_plugins() -> None:
     evt(':plugins_load')
 
 
-def load_config() -> None:
-    config.clear()
-    log.info(f'loading config from {CONFIG_FILE}')
-    _exec(CONFIG_FILE, config)
-    log.debug(f'config: {repr(config)}')
-    evt(':config_load')
-
-
 def _bind_method(
     task: 'Task',
     method: str,
@@ -156,12 +146,11 @@ def load_tasks() -> None:
 
 
 def reload(_signum: int = 0, _frame: t.Any = None) -> bool:
-    log.warning('(re)loading plugins, config and tasks')
+    log.warning('(re)loading plugins and tasks')
     evt(':reload')
     with lock:
         load_err.clear()
         load_plugins()
-        load_config()
         load_tasks()
         if not save():
             load_err.set()
@@ -209,9 +198,9 @@ def main() -> None:
         log.critical('error loading state file!!!', exc_info=True)
         sys.exit(1)
 
-    # load plugins, config, tasks
+    # load plugins and tasks
     if not reload():
-        log.critical('error loading plugins/config/tasks. refuse to start.')
+        log.critical('error loading plugins/tasks. refuse to start.')
         sys.exit(1)
 
     # setup signal handlers
