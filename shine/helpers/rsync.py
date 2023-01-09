@@ -39,6 +39,7 @@ def Rsync(
     # pylint: disable=too-many-arguments
     upstream: str,  # ends with / 'rsync://example.com/example/',
     local: str,
+    ipv: t.Optional[int] = None,
     options: t.Optional[list[str]] = None,
     exclude: t.Optional[list[str]] = None,
     password: t.Optional[str] = None,
@@ -73,6 +74,8 @@ def Rsync(
         raise ValueError('Rsync: timeout too big')
     if io_timeout:
         options.append(f'--timeout={io_timeout}')
+    if ipv in [4, 6]:
+        options.append(f'--ipv{ipv}')
     if no_default_options is False:
         options = DEFAULT_OPTIONS + options
     try:
