@@ -17,12 +17,12 @@ class EventManager:
 
     def __call__(self, event: str, arg: t.Optional[t.Any] = None) -> None:
         log.debug(f'event {event}')
-        try:
-            with lock:
-                for callback in self.registry.get(event, []):
+        with lock:
+            for callback in self.registry.get(event, []):
+                try:
                     callback(arg)
-        except Exception:  # pylint: disable=broad-except
-            log.exception(f'exception caught in plugins handling {event}')
+                except Exception:  # pylint: disable=broad-except
+                    log.exception(f'exception caught in plugins handling {event}')
 
 
 def event_handler(event: str) -> t.Callable[[AnyCallable], AnyCallable]:
